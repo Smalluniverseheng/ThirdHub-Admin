@@ -13,8 +13,8 @@ let adminUser = null;
 /* ---------- 初始化 ---------- */
 function getCfg() {
   return {
-    url: localStorage.getItem('adm:sb-url') || '',
-    key: localStorage.getItem('adm:sb-key') || '',
+    url: localStorage.getItem('adm:sb-url') || 'https://mxvxlgjzeboktufumxbp.supabase.co',
+    key: localStorage.getItem('adm:sb-key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14dnhsZ2p6ZWJva3R1ZnVteGJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzODM5OTcsImV4cCI6MjA5OTk1OTk5N30.QjSLfYAFhwX72YSeAcbTN5O2_PDLaNcv76HhdGJsqpo',
   };
 }
 function ensureCfg() {
