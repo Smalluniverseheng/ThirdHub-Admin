@@ -42,7 +42,7 @@ async function boot() {
 }
 
 async function checkAdmin(uid) {
-  const { data } = await sb.from('profiles').select('*').eq('id', uid).maybeSingle();
+  const { data } = await sb.from('th_profiles').select('*').eq('id', uid).maybeSingle();
   if (data && data.role === 'admin') { adminUser = data; return true; }
   return false;
 }
@@ -103,10 +103,10 @@ function toast(msg) {
 ================================================== */
 async function modDashboard(main) {
   const [users, agents, orders, todayOrders] = await Promise.all([
-    sb.from('profiles').select('id', { count: 'exact', head: true }),
-    sb.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'agent'),
-    sb.from('orders').select('amount, status, created_at'),
-    sb.from('orders').select('amount').eq('status', 'paid').gte('created_at', new Date().toISOString().slice(0, 10)),
+    sb.from('th_profiles').select('id', { count: 'exact', head: true }),
+    sb.from('th_profiles').select('id', { count: 'exact', head: true }).eq('role', 'agent'),
+    sb.from('th_orders').select('amount, status, created_at'),
+    sb.from('th_orders').select('amount').eq('status', 'paid').gte('created_at', new Date().toISOString().slice(0, 10)),
   ]);
   const paidOrders = (orders.data || []).filter((o) => o.status === 'paid');
   const totalIncome = paidOrders.reduce((s, o) => s + (+o.amount || 0), 0);
@@ -134,7 +134,7 @@ async function modDashboard(main) {
   });
 
   // 等级分布
-  const { data: profiles } = await sb.from('profiles').select('level');
+  const { data: profiles } = await sb.from('th_profiles').select('level');
   const lvCount = {};
   (profiles || []).forEach((p) => lvCount[p.level || 'satellite'] = (lvCount[p.level || 'satellite'] || 0) + 1);
   new Chart($('#chart-levels'), {
@@ -160,7 +160,7 @@ async function modUsers(main) {
     <div class="panel"><table><thead><tr><th>邮箱</th><th>昵称</th><th>等级</th><th>角色</th><th>存储用量</th><th>到期时间</th><th>操作</th></tr></thead><tbody id="u-list"></tbody></table></div>`;
 
   async function load(kw = '') {
-    let q = sb.from('profiles').select('*').order('created_at', { ascending: false }).limit(200);
+    let q = sb.from('th_profiles').select('*').order('created_at', { ascending: false }).limit(200);
     if (kw) q = q.or(`email.ilike.%${kw}%,nickname.ilike.%${kw}%`);
     const { data } = await q;
     $('#u-list').innerHTML = (data || []).map((u) => `
@@ -193,7 +193,7 @@ async function modUsers(main) {
         role: $('#e-role', body).value,
         expire_at: $('#e-expire', body).value ? new Date($('#e-expire', body).value).toISOString() : null,
       };
-      const { error } = await sb.from('profiles').update(patch).eq('id', u.id);
+      const { error } = await sb.from('th_profiles').update(patch).eq('id', u.id);
       toast(error ? error.message : '已保存');
       load(kw);
     });
@@ -213,9 +213,9 @@ async function modAgents(main) {
     <div class="panel"><h3>代理列表</h3><table><thead><tr><th>邮箱</th><th>邀请码</th><th>下级数</th><th>累计分润</th><th>操作</th></tr></thead><tbody id="ag-list"></tbody></table></div>
     <div class="panel"><h3>分润记录</h3><table><thead><tr><th>代理</th><th>层级</th><th>比例</th><th>金额</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody id="cm-list"></tbody></table></div>`;
 
-  const { data: agents } = await sb.from('profiles').select('*').eq('role', 'agent');
-  const { data: commissions } = await sb.from('agent_commissions').select('*').order('created_at', { ascending: false }).limit(200);
-  const { data: relations } = await sb.from('agent_relations').select('*');
+  const { data: agents } = await sb.from('th_profiles').select('*').eq('role', 'agent');
+  const { data: commissions } = await sb.from('th_agent_commissions').select('*').order('created_at', { ascending: false }).limit(200);
+  const { data: relations } = await sb.from('th_agent_relations').select('*');
 
   const totalCm = (commissions || []).reduce((s, c) => s + (+c.amount || 0), 0);
   const pending = (commissions || []).filter((c) => c.status === 'pending').reduce((s, c) => s + (+c.amount || 0), 0);
@@ -238,7 +238,7 @@ async function modAgents(main) {
 
   $$('#ag-list [data-demote]').forEach((b) => b.onclick = async () => {
     if (!confirm('确定取消该代理资格？')) return;
-    await sb.from('profiles').update({ role: 'user' }).eq('id', b.dataset.demote);
+    await sb.from('th_profiles').update({ role: 'user' }).eq('id', b.dataset.demote);
     toast('已取消');
     modAgents(main);
   });
@@ -255,7 +255,7 @@ async function modAgents(main) {
     </tr>`).join('') || '<tr><td colspan="7" class="muted">暂无记录</td></tr>';
 
   $$('#cm-list [data-settle]').forEach((b) => b.onclick = async () => {
-    await sb.from('agent_commissions').update({ status: 'settled' }).eq('id', b.dataset.settle);
+    await sb.from('th_agent_commissions').update({ status: 'settled' }).eq('id', b.dataset.settle);
     toast('已结算');
     modAgents(main);
   });
@@ -274,7 +274,7 @@ async function modOrders(main) {
     <div class="panel"><table><thead><tr><th>ID</th><th>用户</th><th>等级</th><th>金额</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody id="o-list"></tbody></table></div>`;
 
   async function load(status = '') {
-    let q = sb.from('orders').select('*, profiles(email)').order('created_at', { ascending: false }).limit(200);
+    let q = sb.from('th_orders').select('*, th_profiles(email)').order('created_at', { ascending: false }).limit(200);
     if (status) q = q.eq('status', status);
     const { data } = await q;
     $('#o-list').innerHTML = (data || []).map((o) => `
@@ -289,12 +289,12 @@ async function modOrders(main) {
       </tr>`).join('') || '<tr><td colspan="7" class="muted">暂无订单</td></tr>';
 
     $$('#o-list [data-pay]').forEach((b) => b.onclick = async () => {
-      await sb.from('orders').update({ status: 'paid' }).eq('id', b.dataset.pay);
+      await sb.from('th_orders').update({ status: 'paid' }).eq('id', b.dataset.pay);
       toast('已标记'); load(status);
     });
     $$('#o-list [data-refund]').forEach((b) => b.onclick = async () => {
       if (!confirm('确定退款？')) return;
-      await sb.from('orders').update({ status: 'refunded' }).eq('id', b.dataset.refund);
+      await sb.from('th_orders').update({ status: 'refunded' }).eq('id', b.dataset.refund);
       toast('已退款'); load(status);
     });
   }
@@ -324,7 +324,7 @@ async function modCards(main) {
     <div class="panel"><table><thead><tr><th>卡密</th><th>等级</th><th>类型</th><th>状态</th><th>使用者</th><th>操作</th></tr></thead><tbody id="c-list"></tbody></table></div>`;
 
   async function load() {
-    const { data } = await sb.from('card_keys').select('*').order('created_at', { ascending: false }).limit(300);
+    const { data } = await sb.from('th_card_keys').select('*').order('created_at', { ascending: false }).limit(300);
     $('#c-list').innerHTML = (data || []).map((c) => `
       <tr>
         <td style="font-family:monospace;font-size:12px">${esc(c.card)}</td>
@@ -335,7 +335,7 @@ async function modCards(main) {
         <td>${!c.used_by && !c.disabled ? `<button class="btn btn-sm btn-red" data-dis="${c.id}">禁用</button>` : ''}</td>
       </tr>`).join('') || '<tr><td colspan="6" class="muted">暂无卡密</td></tr>';
     $$('#c-list [data-dis]').forEach((b) => b.onclick = async () => {
-      await sb.from('card_keys').update({ disabled: true }).eq('id', b.dataset.dis);
+      await sb.from('th_card_keys').update({ disabled: true }).eq('id', b.dataset.dis);
       toast('已禁用'); load();
     });
   }
@@ -345,13 +345,13 @@ async function modCards(main) {
     const type = $('#c-type').value;
     const count = Math.min(500, Math.max(1, +$('#c-count').value || 1));
     const rows = [...Array(count)].map(() => ({ card: genCard(), level, card_type: type }));
-    const { error } = await sb.from('card_keys').insert(rows);
+    const { error } = await sb.from('th_card_keys').insert(rows);
     toast(error ? error.message : `已生成 ${count} 张卡密`);
     load();
   };
 
   $('#c-export').onclick = async () => {
-    const { data } = await sb.from('card_keys').select('card, level, card_type').is('used_by', null).eq('disabled', false);
+    const { data } = await sb.from('th_card_keys').select('card, level, card_type').is('used_by', null).eq('disabled', false);
     const text = (data || []).map((c) => `${c.card}  ${c.level}  ${c.card_type}`).join('\n');
     const blob = new Blob([text], { type: 'text/plain' });
     const a = document.createElement('a');
@@ -389,13 +389,13 @@ async function modUpdates(main) {
       content: $('#up-content').value.trim(),
       download_url: $('#up-url').value.trim(),
     };
-    const { error } = await sb.from('app_updates').insert(row);
+    const { error } = await sb.from('th_app_updates').insert(row);
     toast(error ? error.message : '已发布，客户端启动时将收到推送');
     load();
   };
 
   async function load() {
-    const { data } = await sb.from('app_updates').select('*').order('created_at', { ascending: false }).limit(50);
+    const { data } = await sb.from('th_app_updates').select('*').order('created_at', { ascending: false }).limit(50);
     $('#up-list').innerHTML = (data || []).map((u) => `
       <tr><td>v${esc(u.version)}</td>
       <td><span class="tag ${u.type === 'force' ? 'tag-red' : 'tag-green'}">${u.type === 'force' ? '强制' : '可选'}</span></td>
@@ -419,7 +419,7 @@ async function modFreeModels(main) {
     </div>
     <div class="panel"><h3>说明</h3><p class="muted" style="line-height:1.9">开启后，列表中的模型对所有用户免 Key 开放，Token 消耗由平台承担（经平台代理转发）。关闭或到期后用户需自配 API Key。</p></div>`;
 
-  const { data } = await sb.from('configs').select('value').eq('key', 'free_models').maybeSingle();
+  const { data } = await sb.from('th_configs').select('value').eq('key', 'free_models').maybeSingle();
   let cfg = { enabled: false, models: [], until: '', proxy: '' };
   if (data && data.value) { try { cfg = { ...cfg, ...JSON.parse(data.value) }; } catch (e) {} }
   $('#fm-enabled').value = String(!!cfg.enabled);
@@ -434,7 +434,7 @@ async function modFreeModels(main) {
       until: $('#fm-until').value.trim(),
       proxy: $('#fm-proxy').value.trim(),
     });
-    const { error } = await sb.from('configs').upsert({ key: 'free_models', value, updated_at: new Date().toISOString() });
+    const { error } = await sb.from('th_configs').upsert({ key: 'free_models', value, updated_at: new Date().toISOString() });
     toast(error ? error.message : '已保存并下发');
   };
 }
@@ -466,7 +466,7 @@ async function modSettings(main) {
       <button class="btn" id="sb-save">保存并重载</button>
     </div>`;
 
-  const { data: levels } = await sb.from('membership_levels').select('*').order('sort');
+  const { data: levels } = await sb.from('th_membership_levels').select('*').order('sort');
   $('#lv-list').innerHTML = `<table><thead><tr><th>ID</th><th>名称</th><th>容量（MB，-1 无限）</th><th>月费 ¥</th><th></th></tr></thead><tbody>` +
     (levels || []).map((l) => `
       <tr><td>${esc(l.id)}</td><td><input data-lv-name="${l.id}" value="${esc(l.name)}" style="width:80px"></td>
@@ -476,7 +476,7 @@ async function modSettings(main) {
 
   $$('[data-lv-save]').forEach((b) => b.onclick = async () => {
     const id = b.dataset.lvSave;
-    await sb.from('membership_levels').update({
+    await sb.from('th_membership_levels').update({
       name: $(`[data-lv-name="${id}"]`).value,
       storage_bytes: +$(`[data-lv-sto="${id}"]`).value * 1048576,
       price_month: +$(`[data-lv-price="${id}"]`).value,
@@ -484,26 +484,26 @@ async function modSettings(main) {
     toast('已保存');
   });
 
-  const { data: ratioCfg } = await sb.from('configs').select('value').eq('key', 'agent_rates').maybeSingle();
+  const { data: ratioCfg } = await sb.from('th_configs').select('value').eq('key', 'agent_rates').maybeSingle();
   if (ratioCfg && ratioCfg.value) {
     try { const r = JSON.parse(ratioCfg.value); $('#r1').value = r[0]; $('#r2').value = r[1]; $('#r3').value = r[2]; } catch (e) {}
   }
   $('#r-save').onclick = async () => {
-    await sb.from('configs').upsert({ key: 'agent_rates', value: JSON.stringify([+$('#r1').value, +$('#r2').value, +$('#r3').value]), updated_at: new Date().toISOString() });
+    await sb.from('th_configs').upsert({ key: 'agent_rates', value: JSON.stringify([+$('#r1').value, +$('#r2').value, +$('#r3').value]), updated_at: new Date().toISOString() });
     toast('已保存');
   };
 
-  const { data: ann } = await sb.from('configs').select('value').eq('key', 'announcement').maybeSingle();
+  const { data: ann } = await sb.from('th_configs').select('value').eq('key', 'announcement').maybeSingle();
   if (ann) $('#st-announce').value = ann.value || '';
   $('#st-save').onclick = async () => {
-    await sb.from('configs').upsert({ key: 'announcement', value: $('#st-announce').value, updated_at: new Date().toISOString() });
+    await sb.from('th_configs').upsert({ key: 'announcement', value: $('#st-announce').value, updated_at: new Date().toISOString() });
     toast('公告已发布');
   };
 
-  const { data: mt } = await sb.from('configs').select('value').eq('key', 'maintenance').maybeSingle();
+  const { data: mt } = await sb.from('th_configs').select('value').eq('key', 'maintenance').maybeSingle();
   if (mt) $('#st-maint').value = mt.value === 'true' ? 'true' : 'false';
   $('#mt-save').onclick = async () => {
-    await sb.from('configs').upsert({ key: 'maintenance', value: $('#st-maint').value, updated_at: new Date().toISOString() });
+    await sb.from('th_configs').upsert({ key: 'maintenance', value: $('#st-maint').value, updated_at: new Date().toISOString() });
     toast('已保存');
   };
 
