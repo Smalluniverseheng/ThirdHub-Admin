@@ -1,3 +1,8 @@
+-- ⚠️ 注意：正式部署使用 th_ 前缀表（与 aiBeta 数据隔离），本文件已实际执行到 Supabase 项目 mxvxlgjzeboktufumxbp。
+-- 表清单：th_profiles / th_membership_levels / th_orders / th_agent_commissions / th_agent_relations
+--         / th_card_keys / th_configs / th_app_updates / th_bookshelf / th_reading_progress
+--         / th_history / th_favorites / th_audit_logs，RPC：th_redeem_card，触发器：th_handle_new_user
+
 -- ===== ThirdHub × ThirdHub-Admin Supabase 数据库结构 =====
 -- 在 Supabase SQL Editor 中执行本文件建表
 
