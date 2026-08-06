@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThirdHub 管理后台</title>
+<link rel="stylesheet" href="admin.css?v=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="login-view" class="login-view hidden">
+  <div class="login-card">
+    <div class="login-logo">👑</div>
+    <h1>ThirdHub 管理后台</h1>
+    <p class="muted">仅限管理员账号登录</p>
+    <input id="login-email" type="email" placeholder="管理员邮箱">
+    <input id="login-pwd" type="password" placeholder="密码">
+    <button id="login-btn" class="btn-primary">登 录</button>
+    <div id="login-err" class="login-err"></div>
+  </div>
+</div>
+
+<div id="admin-app" class="admin-app hidden">
+  <aside class="sidebar">
+    <div class="brand">👑 ThirdHub<br><span>管理后台 v1.0</span></div>
+    <nav>
+      <button class="nav-item on" data-mod="dashboard">📊 仪表盘</button>
+      <button class="nav-item" data-mod="users">👤 用户管理</button>
+      <button class="nav-item" data-mod="agents">🤝 代理管理</button>
+      <button class="nav-item" data-mod="orders">🧾 订单管理</button>
+      <button class="nav-item" data-mod="cards">🎫 卡密管理</button>
+      <button class="nav-item" data-mod="updates">🚀 系统更新推送</button>
+      <button class="nav-item" data-mod="freemodels">⚡ 限时免费模型</button>
+      <button class="nav-item" data-mod="settings">⚙️ 系统设置</button>
+    </nav>
+    <button id="logout-btn" class="logout">退出登录</button>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script src="admin.js?v=1.0"></script>
+</body>
+</html>
